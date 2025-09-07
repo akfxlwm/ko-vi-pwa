@@ -24,3 +24,22 @@ button.primary{background:linear-gradient(180deg,#1b5cff,#1447c7);border:0}
 .foot{color:var(--muted);text-align:center;margin:20px 0}
 .ok{color:var(--ok)} .bad{color:var(--bad)}
 ul#wrongList{padding-left:18px}
+/* === 좌측 정답버튼 레이아웃 === */
+.quizrow { display:flex; gap:12px; align-items:stretch; }
+.left-actions { width:120px; display:flex; flex-direction:column; gap:8px }
+.left-actions .accent { background:linear-gradient(180deg,#58d,#147); border:0; font-weight:600; }
+@media (max-width:760px){
+  .quizrow { flex-direction:column; }
+  .left-actions { width:100%; flex-direction:row; }
+  .left-actions .accent { flex:1; height:44px; }
+}
+
+/* === 제출 기록 === */
+.history-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.ghost.small { padding:6px 10px; font-size:12px; background:#0e1424; border:1px solid #2a3350; border-radius:8px; color:#aab3c5; }
+.history { list-style:decimal; margin:0; padding:0 0 0 18px; max-height:320px; overflow:auto; }
+.history li { margin:6px 0; line-height:1.4 }
+.history .ok  { color: var(--ok); font-weight:600 }
+.history .bad { color: var(--bad); font-weight:600 }
+.top-actions { display:flex; gap:8px; align-items:center }
+.lang { padding:6px 10px; border-radius:8px; border:1px solid #2a3350; background:#0e1424; color:#e8ecf3; }
