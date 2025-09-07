@@ -4,23 +4,29 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>한–베 단어 타자 퀴즈</title>
+
+  <!-- PWA / iOS -->
   <meta name="theme-color" content="#1c2231" />
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <!-- Styles -->
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <!-- Header -->
   <header class="topbar">
     <h1 id="hTitle">한–베 단어 타자 퀴즈</h1>
     <div class="top-actions">
+      <!-- UI 언어 토글 (KO ↔ VI) -->
       <button id="btnLang" class="lang">VI</button>
       <span class="badge" id="swStatus">오프라인 준비 안됨</span>
     </div>
   </header>
 
   <main class="wrap">
-    <!-- 학습 시작 -->
+    <!-- 시작 섹션 -->
     <section class="panel">
       <h2 id="startSectionTitle">학습 시작</h2>
       <div class="grid2">
@@ -40,7 +46,7 @@
       </div>
     </section>
 
-    <!-- 퀴즈 -->
+    <!-- 퀴즈 섹션 -->
     <section id="quiz" class="panel hidden" aria-live="polite">
       <div class="quizmeta">
         <div><span id="labelQuestionCounter">문항</span> <span id="cur">0</span>/<span id="total">0</span></div>
@@ -48,10 +54,10 @@
         <div id="timer" class="hidden">⏱ <span id="sec">0</span>s</div>
       </div>
 
-      <!-- 좌측에 정답보기 버튼, 우측에 문제영역 -->
+      <!-- 좌측: 정답 제출 버튼 / 우측: 문제 -->
       <div class="quizrow">
         <div class="left-actions">
-          <button id="btnShow" class="accent">정답보기</button>
+          <button id="btnSubmit" class="primary submit-left">정답 제출</button>
         </div>
         <div class="qbox">
           <div class="vi" id="viText">—</div>
@@ -60,19 +66,28 @@
       </div>
 
       <div class="ibox">
-        <input id="answer" type="text" inputmode="text" placeholder="여기에 한국어 정답 입력"
-               autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-        <button id="btnSubmit" class="primary">엔터=제출</button>
+        <input
+          id="answer"
+          type="text"
+          inputmode="text"
+          placeholder="여기에 한국어 정답 입력"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+        />
       </div>
+
       <div class="actions">
         <button id="btnHint">힌트(초성)</button>
         <button id="btnPass">패스</button>
+        <button id="btnShow">정답보기</button>
       </div>
 
       <div id="feedback" class="feedback"></div>
     </section>
 
-    <!-- 결과 -->
+    <!-- 결과 섹션 -->
     <section id="result" class="panel hidden">
       <h2 id="resultTitle">결과</h2>
       <div class="grid2">
@@ -87,45 +102,36 @@
       </div>
     </section>
 
-    <!-- 제출 기록 (하단에 계속 누적) -->
-    <section id="quiz" class="panel hidden" aria-live="polite">
-      <div class="quizmeta">
-        <div><span id="labelQuestionCounter">문항</span> <span id="cur">0</span>/<span id="total">0</span></div>
-        <div><span id="labelAccuracy">정답률</span> <span id="acc">0%</span></div>
-        <div id="timer" class="hidden">⏱ <span id="sec">0</span>s</div>
+    <!-- 제출 기록 (하단 누적) -->
+    <section id="historyPanel" class="panel">
+      <div class="history-head">
+        <h2 id="historyTitle">제출 기록</h2>
+        <button id="btnClearHistory" class="ghost small">기록 비우기</button>
       </div>
-    
-      <!-- 좌측: 정답제출 버튼 / 우측: 문제 -->
-      <div class="quizrow">
-        <div class="left-actions">
-          <button id="btnSubmit" class="primary submit-left">정답 제출</button>
-        </div>
-        <div class="qbox">
-          <div class="vi" id="viText">—</div>
-          <div class="note" id="noteText"></div>
-        </div>
-      </div>
-    
-      <div class="ibox">
-        <input id="answer" type="text" inputmode="text" placeholder="여기에 한국어 정답 입력"
-               autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-      </div>
-    
-      <div class="actions">
-        <button id="btnHint">힌트(초성)</button>
-        <button id="btnPass">패스</button>
-        <button id="btnShow">정답보기</button>
-      </div>
-    
-      <div id="feedback" class="feedback"></div>
+      <ol id="historyList" class="history"></ol>
     </section>
-    
 
     <footer class="foot">
       <small id="footerNote">오프라인 PWA · 데이터: 1–9과</small>
     </footer>
   </main>
 
+  <!-- (옵션) all.json이 없는 구버전 호환을 위한 메타. all.json을 쓰면 아래는 무시됩니다. -->
+  <script>
+    window.HV_LESSONS = [
+      {"id":"01","title":"소개"},
+      {"id":"02","title":"학교"},
+      {"id":"03","title":"일상생활"},
+      {"id":"04","title":"날짜와 요일"},
+      {"id":"05","title":"하루 일과"},
+      {"id":"06","title":"주말"},
+      {"id":"07","title":"물건 사기"},
+      {"id":"08","title":"음식"},
+      {"id":"09","title":"집"}
+    ];
+  </script>
+
+  <!-- App -->
   <script src="app.js"></script>
 </body>
 </html>
