@@ -1,0 +1,9 @@
+{
+  "name": "한–베 단어 타자 퀴즈",
+  "short_name": "KO–VI 퀴즈",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1c2231",
+  "theme_color": "#1c2231",
+  "icons": []
+}
