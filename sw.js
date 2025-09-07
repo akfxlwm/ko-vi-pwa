@@ -1,4 +1,4 @@
-const CACHE = 'hv-v1';
+const CACHE = 'hv-v2';
 const PRECACHE = ['index.html','styles.css','app.js','manifest.webmanifest','data/all.json'];
 
 self.addEventListener('install', e => {
