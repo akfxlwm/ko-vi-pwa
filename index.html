@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>한–베 단어 타자 퀴즈</title>
+  <meta name="theme-color" content="#1c2231" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>한–베 단어 타자 퀴즈</h1>
+    <span class="badge" id="swStatus">오프라인 준비 안됨</span>
+  </header>
+
+  <main class="wrap">
+    <section class="panel">
+      <h2>학습 시작</h2>
+      <div class="grid2">
+        <div>
+          <label>과 선택(복수 선택 가능)</label>
+          <select id="lessonSelect" multiple size="9" aria-label="과 선택"></select>
+          <div class="hintline">⌘/Ctrl + 클릭으로 다중 선택</div>
+        </div>
+        <div>
+          <label>문항 수</label>
+          <input id="qCount" type="number" min="1" value="20" />
+          <label class="row"><input id="optRandom" type="checkbox" checked /> 랜덤 출제</label>
+          <label class="row"><input id="optStrict" type="checkbox" /> 엄격 채점(공백/기호 불허)</label>
+          <label class="row"><input id="optTimer" type="checkbox" /> 타이머 표시</label>
+          <button id="btnStart" class="primary">공부 시작</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="quiz" class="panel hidden" aria-live="polite">
+      <div class="quizmeta">
+        <div>문항 <span id="cur">0</span>/<span id="total">0</span></div>
+        <div>정답률 <span id="acc">0%</span></div>
+        <div id="timer" class="hidden">⏱ <span id="sec">0</span>s</div>
+      </div>
+      <div class="qbox">
+        <div class="vi" id="viText">—</div>
+        <div class="note" id="noteText"></div>
+      </div>
+      <div class="ibox">
+        <input id="answer" type="text" inputmode="text" placeholder="여기에 한국어 정답 입력"
+               autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+        <button id="btnSubmit" class="primary">엔터=제출</button>
+      </div>
+      <div class="actions">
+        <button id="btnHint">힌트(초성)</button>
+        <button id="btnPass">패스</button>
+        <button id="btnShow">정답보기</button>
+      </div>
+      <div id="feedback" class="feedback"></div>
+    </section>
+
+    <section id="result" class="panel hidden">
+      <h2>결과</h2>
+      <div class="grid2">
+        <div>
+          <p>점수: <b id="score">0</b> / <span id="resultTotal">0</span></p>
+          <p>정답률: <b id="resultAcc">0%</b></p>
+        </div>
+        <div>
+          <h3>오답 노트</h3>
+          <ul id="wrongList"></ul>
+        </div>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <small>오프라인 PWA · 데이터: 1–9과</small>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
