@@ -88,13 +88,38 @@
     </section>
 
     <!-- 제출 기록 (하단에 계속 누적) -->
-    <section id="historyPanel" class="panel">
-      <div class="history-head">
-        <h2 id="historyTitle">제출 기록</h2>
-        <button id="btnClearHistory" class="ghost small">기록 비우기</button>
+    <section id="quiz" class="panel hidden" aria-live="polite">
+      <div class="quizmeta">
+        <div><span id="labelQuestionCounter">문항</span> <span id="cur">0</span>/<span id="total">0</span></div>
+        <div><span id="labelAccuracy">정답률</span> <span id="acc">0%</span></div>
+        <div id="timer" class="hidden">⏱ <span id="sec">0</span>s</div>
       </div>
-      <ol id="historyList" class="history"></ol>
+    
+      <!-- 좌측: 정답제출 버튼 / 우측: 문제 -->
+      <div class="quizrow">
+        <div class="left-actions">
+          <button id="btnSubmit" class="primary submit-left">정답 제출</button>
+        </div>
+        <div class="qbox">
+          <div class="vi" id="viText">—</div>
+          <div class="note" id="noteText"></div>
+        </div>
+      </div>
+    
+      <div class="ibox">
+        <input id="answer" type="text" inputmode="text" placeholder="여기에 한국어 정답 입력"
+               autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+      </div>
+    
+      <div class="actions">
+        <button id="btnHint">힌트(초성)</button>
+        <button id="btnPass">패스</button>
+        <button id="btnShow">정답보기</button>
+      </div>
+    
+      <div id="feedback" class="feedback"></div>
     </section>
+    
 
     <footer class="foot">
       <small id="footerNote">오프라인 PWA · 데이터: 1–9과</small>
