@@ -84,6 +84,7 @@
         <button id="btnShow">정답보기</button>
       </div>
 
+      <!-- 문제별 보조 메시지(힌트 등). 정오답 토스트는 #toast 사용 -->
       <div id="feedback" class="feedback"></div>
     </section>
 
@@ -115,6 +116,9 @@
       <small id="footerNote">오프라인 PWA · 데이터: 1–9과</small>
     </footer>
   </main>
+
+  <!-- 비차단 정오답 토스트(3초 유지) -->
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
   <!-- (옵션) all.json이 없는 구버전 호환을 위한 메타. all.json을 쓰면 아래는 무시됩니다. -->
   <script>
