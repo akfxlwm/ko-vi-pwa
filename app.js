@@ -1,10 +1,10 @@
 // ============================
 // KO–VI Quiz PWA — app.js
-// - 엔터 중복 제출 방지(락)
-// - 정답제출 버튼(좌측) 연동
-// - 피드백 3초 유지
-// - 제출 기록 누적(하단)
-// - UI 언어 토글(한국어/베트남어)
+// 계획 반영:
+// - 정답 제출 즉시 다음 문제로 전환
+// - 정오답 안내는 비차단 토스트로 3초간 표시
+// - 엔터/클릭 중복 제출 방지(락)
+// - 제출 기록 누적 + UI 언어 토글(한국어/베트남어)
 // ============================
 
 // ---------- 요소 참조 ----------
@@ -40,11 +40,11 @@ const ELS = {
   vi: E('viText'),
   note: E('noteText'),
   answer: E('answer'),
-  btnSubmit: E('btnSubmit'),     // 좌측 "정답 제출" 버튼
+  btnSubmit: E('btnSubmit'),     // 좌측 "정답 제출"
   btnHint: E('btnHint'),
   btnPass: E('btnPass'),
   btnShow: E('btnShow'),
-  feedback: E('feedback'),
+  feedback: E('feedback'),       // 힌트 등 보조 메시지
 
   // 결과 섹션
   result: E('result'),
@@ -67,13 +67,16 @@ const ELS = {
   labelQuestionCounter: E('labelQuestionCounter'),
   labelAccuracy: E('labelAccuracy'),
 
+  // 토스트(정오답 3초 비차단 안내)
+  toast: E('toast'),
+
   // 푸터
   footerNote: E('footerNote'),
 };
 
 // ---------- 환경 상수/상태 ----------
-const FEEDBACK_MS = 3000; // 정오답 안내 메시지 유지 시간(3초)
-let isAdvancing = false;  // 중복 제출/전환 방지 락
+const TOAST_MS = 3000;   // 토스트 노출 시간
+let toastTimer = null;
 
 let uiLang = localStorage.getItem('uiLang') || 'ko';
 let DB = null;            // { lessons: [{lessonId,title,items:[{ko,vi,altKo[],note}]}] }
@@ -84,7 +87,12 @@ let correct = 0;          // 정답 수
 let wrong = [];           // 오답 모음
 let timerId = null;       // 타이머
 let secs = 0;             // 경과 초
-const history = [];       // 제출 기록 누적
+
+// 같은 문제에서 엔터/클릭이 겹칠 때 1회만 처리하기 위한 락
+let isAdvancing = false;
+
+// 제출 기록 누적
+const history = [];
 
 // ---------- i18n ----------
 const I18N = {
@@ -170,7 +178,7 @@ function applyI18n() {
   // 퀴즈 섹션
   ELS.labelQuestionCounter.textContent = t.questionCounter;
   ELS.labelAccuracy.textContent = t.accuracy;
-  ELS.btnSubmit.textContent = t.submit;      // 좌측 "정답 제출"
+  ELS.btnSubmit.textContent = t.submit;
   ELS.btnHint.textContent = t.hint;
   ELS.btnPass.textContent = t.pass;
   ELS.btnShow.textContent = t.show;
@@ -180,7 +188,7 @@ function applyI18n() {
   ELS.scoreLabel.textContent = t.scoreLabel;
   ELS.accuracyLabel.textContent = t.accLabel;
   ELS.wrongTitle.textContent = t.wrongTitle;
-  // 기록 섹션/푸터
+  // 기록/푸터
   ELS.historyTitle.textContent = t.historyTitle;
   ELS.btnClearHistory.textContent = t.clearHistory;
   ELS.footerNote.textContent = t.footerNote;
@@ -239,6 +247,23 @@ function normalize(s, strict=false) {
   return x;
 }
 function tick(){ secs += 1; ELS.sec.textContent = secs; }
+
+function showToast(message, type/* 'ok' | 'bad' */) {
+  if (!ELS.toast) return;
+  // reset & set
+  ELS.toast.classList.remove('ok','bad','visible');
+  if (type) ELS.toast.classList.add(type);
+  ELS.toast.innerHTML = message;
+  // visible
+  requestAnimationFrame(()=>{
+    ELS.toast.classList.add('visible');
+  });
+  // timer reset
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{
+    ELS.toast.classList.remove('visible');
+  }, TOAST_MS);
+}
 
 // 제출 기록 DOM 추가
 function appendHistoryEntry({vi, user, ok, ko, mode}) {
@@ -308,24 +333,27 @@ function showNext(){
   ELS.vi.textContent = q.vi;
   ELS.note.textContent = q.note || '';
   ELS.answer.value=''; ELS.answer.focus();
+  // 문제별 보조 메시지는 비움, 토스트는 유지
   ELS.feedback.innerHTML = '';
 }
 
-// 공용 제출(엔터/버튼) — 중복 방지 락
+// 공용 제출(엔터/버튼) — 같은 문제 중복 방지
 function submitAnswerOnce() {
   if (isAdvancing) return;
   isAdvancing = true;
-  evaluate(false);
+  evaluate(false);       // 채점/토스트/다음 문제 전환
+  isAdvancing = false;   // 다음 문제부터 다시 입력 가능
 }
 
-// 정답보기(노출만) — 중복 방지 락
+// 정답보기(학습용) — 비차단 토스트 + 즉시 다음 문제
 function revealOnce() {
   if (isAdvancing) return;
   isAdvancing = true;
   evaluate(true);
+  isAdvancing = false;
 }
 
-// 패스 처리 — 중복 방지 락
+// 패스 — 비차단 토스트 + 즉시 다음 문제
 function passOnce() {
   if (isAdvancing) return;
   isAdvancing = true;
@@ -337,23 +365,25 @@ function passOnce() {
   wrong.push(q);
   history.push({vi:q.vi, user:'(pass)', ok:false, ko:q.ko, mode:'pass'});
   appendHistoryEntry({vi:q.vi, user:'(pass)', ok:false, ko:q.ko, mode:'pass'});
-  ELS.feedback.innerHTML = `<span class="bad">${t.wrong}</span> · ${t.answerIs} <b>${q.ko}</b>`;
+  showToast(`${t.answerIs}: <b>${q.ko}</b>`, 'bad');
 
   idx++;
   ELS.acc.textContent = `${Math.round((correct/Math.max(1,idx))*100)}%`;
 
-  if (idx >= order.length) {
-    setTimeout(()=>{ isAdvancing = false; finish(); }, FEEDBACK_MS);
-  } else {
-    setTimeout(()=>{ isAdvancing = false; showNext(); }, FEEDBACK_MS);
-  }
+  // 즉시 전환
+  if (idx >= order.length) finish();
+  else showNext();
+
+  isAdvancing = false;
 }
 
 // 정답 채점/표시(공용)
+// - 제출 즉시 토스트 띄우고
+// - 즉시 다음 문제로 전환(또는 종료)
 function evaluate(showing=false) {
   const t = I18N[uiLang];
   const q = pool[order[idx]];
-  if (!q) { isAdvancing = false; return; }
+  if (!q) return;
 
   const strict = ELS.optStrict.checked;
   const ans = normalize(ELS.answer.value, strict);
@@ -362,30 +392,27 @@ function evaluate(showing=false) {
   const ok = !showing && ans.length>0 && (ans===target || alts.includes(ans));
 
   if (showing) {
-    // 정답 보기(학습 목적)
     history.push({vi:q.vi, user:null, ok:false, ko:q.ko, mode:'show'});
     appendHistoryEntry({vi:q.vi, user:null, ok:false, ko:q.ko, mode:'show'});
-    ELS.feedback.innerHTML = `${t.answerIs}: <b class="ok">${q.ko}</b> <span class="muted">(${q.vi})</span>`;
+    showToast(`${t.answerIs}: <b>${q.ko}</b>`, 'bad');
   } else if (ok) {
     correct++;
     history.push({vi:q.vi, user:ELS.answer.value, ok:true, ko:q.ko});
     appendHistoryEntry({vi:q.vi, user:ELS.answer.value, ok:true, ko:q.ko});
-    ELS.feedback.innerHTML = `<span class="ok">${t.correct}!</span>`;
+    showToast(`<b>${t.correct}!</b>`, 'ok');
   } else {
     wrong.push(q);
     history.push({vi:q.vi, user:ELS.answer.value, ok:false, ko:q.ko});
     appendHistoryEntry({vi:q.vi, user:ELS.answer.value, ok:false, ko:q.ko});
-    ELS.feedback.innerHTML = `<span class="bad">${t.wrong}</span> · ${t.answerIs} <b>${q.ko}</b>`;
+    showToast(`${t.wrong} · ${t.answerIs}: <b>${q.ko}</b>`, 'bad');
   }
 
   idx++;
   ELS.acc.textContent = `${Math.round((correct/Math.max(1,idx))*100)}%`;
 
-  if (idx >= order.length) {
-    setTimeout(() => { isAdvancing = false; finish(); }, FEEDBACK_MS);
-  } else {
-    setTimeout(() => { isAdvancing = false; showNext(); }, FEEDBACK_MS);
-  }
+  // 즉시 다음 문제로 전환(끝이면 결과로)
+  if (idx >= order.length) finish();
+  else showNext();
 }
 
 function finish(){
@@ -414,6 +441,17 @@ ELS.answer.addEventListener('keydown', (e)=>{
     e.preventDefault();
     submitAnswerOnce(); // 엔터 중복 제출 방지
   }
+});
+
+ELS.btnHint.addEventListener('click', ()=>{
+  const q = pool[order[idx]];
+  if (!q) return;
+  const CHO=["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+  const cho=(ch)=>{const code=ch.charCodeAt(0)-0xAC00; if(code<0||code>11171)return ch; return CHO[Math.floor(code/588)];}
+  const h = Array.from(q.ko).map(cho).join('');
+  // 힌트는 문제별 보조 메시지(#feedback)에 노출
+  ELS.feedback.innerHTML = `힌트: <b>${h}</b>`;
+  ELS.answer.focus();
 });
 
 // ---------- 초기화 & SW 등록 ----------
