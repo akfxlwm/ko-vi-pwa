@@ -18,6 +18,7 @@ const ELS = {
   // 시작 섹션
   startSectionTitle: E('startSectionTitle'),
   labelLessonSelect: E('labelLessonSelect'),
+  lessonSelect: E('lessonSelect'),
   lessonButtons: E('lessonButtons'),
   hintlineText: E('hintlineText'),
   labelQCount: E('labelQCount'),
@@ -173,8 +174,16 @@ function applyI18n() {
   // 시작 섹션
   ELS.startSectionTitle.textContent = t.startTitle;
   ELS.labelLessonSelect.textContent = t.lessonSelect;
-  if (ELS.lessonButtons) ELS.lessonButtons.setAttribute('aria-label', t.lessonSelect);
-  ELS.hintlineText.textContent = t.hintline;
+  if (ELS.lessonButtons) {
+    ELS.lessonButtons.setAttribute('aria-label', t.lessonSelect);
+    ELS.hintlineText.textContent = t.hintline;
+  } else if (ELS.lessonSelect) {
+    ELS.hintlineText.textContent = (uiLang === 'ko'
+      ? '⌘/Ctrl + 클릭으로 다중 선택'
+      : 'Giữ ⌘/Ctrl để chọn nhiều');
+  } else {
+    ELS.hintlineText.textContent = t.hintline;
+  }
   ELS.labelQCount.textContent = t.qCount;
   ELS.optRandomLabel.textContent = t.optRandom;
   ELS.optStrictLabel.textContent = t.optStrict;
@@ -217,7 +226,6 @@ async function tryLoadAllJson() {
 }
 
 async function ensureMetaOptions() {
-  if (!ELS.lessonButtons) return;
   if (!DB) {
     DB = await tryLoadAllJson();
   }
@@ -229,16 +237,38 @@ async function ensureMetaOptions() {
     }
   }
   if (!lessonsMeta.length) return;
-  const available = new Set(lessonsMeta.map(L => L.lessonId));
-  selectedLessons.forEach(id => { if (!available.has(id)) selectedLessons.delete(id); });
-  if (selectedLessons.size) {
-    hasSeededLessons = true;
+
+  if (ELS.lessonButtons) {
+    const available = new Set(lessonsMeta.map(L => L.lessonId));
+    selectedLessons.forEach(id => { if (!available.has(id)) selectedLessons.delete(id); });
+    if (selectedLessons.size) {
+      hasSeededLessons = true;
+    }
+    if (!selectedLessons.size && !hasSeededLessons) {
+      selectedLessons.add(lessonsMeta[0].lessonId);
+      hasSeededLessons = true;
+    }
+    renderLessonButtons();
+  } else if (ELS.lessonSelect) {
+    const prev = new Set(Array.from(ELS.lessonSelect.selectedOptions || []).map(o => o.value));
+    ELS.lessonSelect.innerHTML = '';
+    lessonsMeta.forEach(L => {
+      const o = document.createElement('option');
+      o.value = L.lessonId;
+      o.textContent = `${L.lessonId} · ${L.title}`;
+      if ((prev.size && prev.has(L.lessonId)) || (!prev.size && lessonsMeta[0].lessonId === L.lessonId)) {
+        o.selected = true;
+      }
+      ELS.lessonSelect.appendChild(o);
+    });
+    if (!ELS.lessonSelect.selectedOptions.length && ELS.lessonSelect.options.length) {
+      ELS.lessonSelect.options[0].selected = true;
+    }
+    const fallbackHint = uiLang === 'ko'
+      ? '⌘/Ctrl + 클릭으로 다중 선택'
+      : 'Giữ ⌘/Ctrl để chọn nhiều';
+    ELS.hintlineText.textContent = fallbackHint;
   }
-  if (!selectedLessons.size && !hasSeededLessons) {
-    selectedLessons.add(lessonsMeta[0].lessonId);
-    hasSeededLessons = true;
-  }
-  renderLessonButtons();
 }
 
 function renderLessonButtons() {
@@ -320,7 +350,14 @@ ELS.btnClearHistory.addEventListener('click', ()=>{
 // ---------- 퀴즈 로직 ----------
 async function startQuiz(){
   await ensureMetaOptions();
-  const ids = Array.from(selectedLessons);
+  let ids;
+  if (ELS.lessonButtons) {
+    ids = Array.from(selectedLessons);
+  } else if (ELS.lessonSelect) {
+    ids = Array.from(ELS.lessonSelect.selectedOptions).map(o=>o.value);
+  } else {
+    ids = [];
+  }
   const t = I18N[uiLang];
   if (ids.length === 0) { alert(uiLang==='ko' ? '최소 1개 과목을 선택하세요.' : 'Hãy chọn ít nhất 1 bài học.'); return; }
 
