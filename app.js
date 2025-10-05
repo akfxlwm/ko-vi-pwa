@@ -18,7 +18,7 @@ const ELS = {
   // 시작 섹션
   startSectionTitle: E('startSectionTitle'),
   labelLessonSelect: E('labelLessonSelect'),
-  lessonSelect: E('lessonSelect'),
+  lessonButtons: E('lessonButtons'),
   hintlineText: E('hintlineText'),
   labelQCount: E('labelQCount'),
   qCount: E('qCount'),
@@ -94,13 +94,17 @@ let isAdvancing = false;
 // 제출 기록 누적
 const history = [];
 
+let lessonsMeta = [];
+const selectedLessons = new Set();
+let hasSeededLessons = false;
+
 // ---------- i18n ----------
 const I18N = {
   ko: {
     title:'한–베 단어 타자 퀴즈',
     startTitle:'학습 시작',
-    lessonSelect:'과 선택(복수 선택 가능)',
-    hintline:'⌘/Ctrl + 클릭으로 다중 선택',
+    lessonSelect:'과목 선택',
+    hintline:'원하는 과목 버튼을 눌러 켜거나 끄세요.',
     qCount:'문항 수',
     optRandom:'랜덤 출제',
     optStrict:'엄격 채점(공백/기호 불허)',
@@ -130,8 +134,8 @@ const I18N = {
   vi: {
     title:'Gõ tiếng Hàn theo nghĩa',
     startTitle:'Bắt đầu học',
-    lessonSelect:'Chọn bài (chọn nhiều)',
-    hintline:'Giữ ⌘/Ctrl để chọn nhiều',
+    lessonSelect:'Chọn bài học (ấn nút để bật/tắt)',
+    hintline:'Nhấn nút để bật/tắt bài học mong muốn.',
     qCount:'Số câu',
     optRandom:'Xáo thứ tự',
     optStrict:'Chấm nghiêm (không bỏ khoảng/ký tự)',
@@ -169,6 +173,7 @@ function applyI18n() {
   // 시작 섹션
   ELS.startSectionTitle.textContent = t.startTitle;
   ELS.labelLessonSelect.textContent = t.lessonSelect;
+  if (ELS.lessonButtons) ELS.lessonButtons.setAttribute('aria-label', t.lessonSelect);
   ELS.hintlineText.textContent = t.hintline;
   ELS.labelQCount.textContent = t.qCount;
   ELS.optRandomLabel.textContent = t.optRandom;
@@ -212,30 +217,54 @@ async function tryLoadAllJson() {
 }
 
 async function ensureMetaOptions() {
-  // all.json 있으면 그걸 메인 DB로 사용
-  DB = await tryLoadAllJson();
-  if (DB && Array.isArray(DB.lessons)) {
-    ELS.lessonSelect.innerHTML = '';
-    DB.lessons.forEach(L => {
-      const o = document.createElement('option');
-      o.value = L.lessonId;
-      o.textContent = `${L.lessonId}과 · ${L.title}`;
-      ELS.lessonSelect.appendChild(o);
-    });
-    if (ELS.lessonSelect.options.length) ELS.lessonSelect.options[0].selected = true;
-    return;
+  if (!ELS.lessonButtons) return;
+  if (!DB) {
+    DB = await tryLoadAllJson();
   }
-  // 없으면 이전 버전(window.HV_LESSONS) 호환
-  if (window.HV_LESSONS && Array.isArray(window.HV_LESSONS)) {
-    ELS.lessonSelect.innerHTML = '';
-    window.HV_LESSONS.forEach(L => {
-      const o = document.createElement('option');
-      o.value = L.id;
-      o.textContent = `${L.id}과 · ${L.title}`;
-      ELS.lessonSelect.appendChild(o);
-    });
-    if (ELS.lessonSelect.options.length) ELS.lessonSelect.options[0].selected = true;
+  if (!lessonsMeta.length) {
+    if (DB && Array.isArray(DB.lessons)) {
+      lessonsMeta = DB.lessons.map(L => ({ lessonId: L.lessonId, title: L.title }));
+    } else if (window.HV_LESSONS && Array.isArray(window.HV_LESSONS)) {
+      lessonsMeta = window.HV_LESSONS.map(L => ({ lessonId: L.id, title: L.title }));
+    }
   }
+  if (!lessonsMeta.length) return;
+  const available = new Set(lessonsMeta.map(L => L.lessonId));
+  selectedLessons.forEach(id => { if (!available.has(id)) selectedLessons.delete(id); });
+  if (selectedLessons.size) {
+    hasSeededLessons = true;
+  }
+  if (!selectedLessons.size && !hasSeededLessons) {
+    selectedLessons.add(lessonsMeta[0].lessonId);
+    hasSeededLessons = true;
+  }
+  renderLessonButtons();
+}
+
+function renderLessonButtons() {
+  if (!ELS.lessonButtons) return;
+  ELS.lessonButtons.innerHTML = '';
+  lessonsMeta.forEach(L => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'lesson-btn';
+    btn.dataset.lesson = L.lessonId;
+    btn.textContent = `${L.lessonId} · ${L.title}`;
+    const active = selectedLessons.has(L.lessonId);
+    btn.classList.toggle('is-selected', active);
+    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    btn.addEventListener('click', () => {
+      const willSelect = !selectedLessons.has(L.lessonId);
+      if (willSelect) {
+        selectedLessons.add(L.lessonId);
+      } else {
+        selectedLessons.delete(L.lessonId);
+      }
+      btn.classList.toggle('is-selected', willSelect);
+      btn.setAttribute('aria-pressed', willSelect ? 'true' : 'false');
+    });
+    ELS.lessonButtons.appendChild(btn);
+  });
 }
 
 // ---------- 유틸 ----------
@@ -291,9 +320,9 @@ ELS.btnClearHistory.addEventListener('click', ()=>{
 // ---------- 퀴즈 로직 ----------
 async function startQuiz(){
   await ensureMetaOptions();
-  const ids = Array.from(ELS.lessonSelect.selectedOptions).map(o=>o.value);
+  const ids = Array.from(selectedLessons);
   const t = I18N[uiLang];
-  if (ids.length === 0) { alert(uiLang==='ko' ? '최소 1개 과를 선택하세요.' : 'Hãy chọn ít nhất 1 bài.'); return; }
+  if (ids.length === 0) { alert(uiLang==='ko' ? '최소 1개 과목을 선택하세요.' : 'Hãy chọn ít nhất 1 bài học.'); return; }
 
   if (DB && DB.lessons) {
     const chosen = DB.lessons.filter(L=>ids.includes(L.lessonId));
