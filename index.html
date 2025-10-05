@@ -16,18 +16,24 @@
 </head>
 <body>
   <!-- Header -->
+  
   <header class="topbar">
-    <h1 id="hTitle">한–베 단어 타자 퀴즈</h1>
-    <div class="top-actions">
-      <!-- UI 언어 토글 (KO ↔ VI) -->
-      <button id="btnLang" class="lang">VI</button>
-      <span class="badge" id="swStatus">오프라인 준비 안됨</span>
+    <div class="topbar-main">
+      <h1 id="hTitle">한–베 단어 타자 퀴즈</h1>
+      <div class="top-actions">
+        <button id="btnLang" class="lang">VI</button>
+        <span class="badge" id="swStatus">오프라인 준비 안 됨</span>
+      </div>
     </div>
+    <nav class="topnav" role="tablist">
+      <button id="navQuiz" class="nav-btn is-active" data-view="quiz" role="tab" aria-selected="true">퀴즈</button>
+      <button id="navDictionary" class="nav-btn" data-view="dictionary" role="tab" aria-selected="false">단어집</button>
+    </nav>
   </header>
 
   <main class="wrap">
     <!-- 시작 섹션 -->
-    <section class="panel">
+    <section id="startPanel" class="panel">
       <h2 id="startSectionTitle">학습 시작</h2>
       <div class="grid2">
         <div>
@@ -101,6 +107,14 @@
           <ul id="wrongList"></ul>
         </div>
       </div>
+    </section>
+
+    <section id="dictionary" class="panel view-hidden" aria-live="polite">
+      <div class="dict-meta">
+        <h2 id="dictTitle">단어집</h2>
+        <p id="dictSubtitle" class="muted">원하는 과목을 열어 단어를 확인하세요.</p>
+      </div>
+      <div id="dictLessons" class="dict-lessons"></div>
     </section>
 
     <!-- 제출 기록 (하단 누적) -->

@@ -14,8 +14,11 @@ const ELS = {
   hTitle: E('hTitle'),
   btnLang: E('btnLang'),
   swStatus: E('swStatus'),
+  navQuiz: E('navQuiz'),
+  navDictionary: E('navDictionary'),
 
   // 시작 섹션
+  startPanel: E('startPanel'),
   startSectionTitle: E('startSectionTitle'),
   labelLessonSelect: E('labelLessonSelect'),
   lessonSelect: E('lessonSelect'),
@@ -64,6 +67,12 @@ const ELS = {
   historyList: E('historyList'),
   btnClearHistory: E('btnClearHistory'),
 
+  // 단어집
+  dictionary: E('dictionary'),
+  dictTitle: E('dictTitle'),
+  dictSubtitle: E('dictSubtitle'),
+  dictLessons: E('dictLessons'),
+
   // 메타 라벨
   labelQuestionCounter: E('labelQuestionCounter'),
   labelAccuracy: E('labelAccuracy'),
@@ -95,6 +104,11 @@ let isAdvancing = false;
 // 제출 기록 누적
 const history = [];
 
+const VIEW_KEY = 'hvActiveView';
+let activeView = localStorage.getItem(VIEW_KEY) || 'quiz';
+let dictionaryRendered = false;
+let dictionaryTried = false;
+
 let lessonsMeta = [];
 const selectedLessons = new Set();
 let hasSeededLessons = false;
@@ -104,6 +118,15 @@ const I18N = {
   ko: {
     title:'한–베 단어 타자 퀴즈',
     startTitle:'학습 시작',
+    navQuiz:'퀴즈',
+    navDictionary:'단어집',
+    dictTitle:'단어집',
+    dictSubtitle:'원하는 과목을 열어 단어를 확인하세요.',
+    dictLoading:'단어 데이터를 불러오는 중...',
+    dictEmpty:'단어 데이터를 불러오지 못했습니다.',
+    wordCount:'단어 {n}개',
+    altLabel:'다른 표기',
+    noteLabel:'비고',
     lessonSelect:'과목 선택',
     hintline:'원하는 과목 버튼을 눌러 켜거나 끄세요.',
     qCount:'문항 수',
@@ -135,6 +158,15 @@ const I18N = {
   vi: {
     title:'Gõ tiếng Hàn theo nghĩa',
     startTitle:'Bắt đầu học',
+    navQuiz:'Luyện tập',
+    navDictionary:'Từ vựng',
+    dictTitle:'Sổ từ vựng',
+    dictSubtitle:'Mở từng bài để xem danh sách từ vựng.',
+    dictLoading:'Đang tải danh sách từ...',
+    dictEmpty:'Không thể tải dữ liệu từ.',
+    wordCount:'{n} từ',
+    altLabel:'Cách viết khác',
+    noteLabel:'Ghi chú',
     lessonSelect:'Chọn bài học (ấn nút để bật/tắt)',
     hintline:'Nhấn nút để bật/tắt bài học mong muốn.',
     qCount:'Số câu',
@@ -168,46 +200,53 @@ const I18N = {
 function applyI18n() {
   const t = I18N[uiLang];
   document.documentElement.lang = (uiLang === 'ko' ? 'ko' : 'vi');
-  // 헤더/버튼
-  ELS.hTitle.textContent = t.title;
-  ELS.btnLang.textContent = t.langBtn;
+  // 헤더/네비
+  if (ELS.hTitle) ELS.hTitle.textContent = t.title;
+  if (ELS.btnLang) ELS.btnLang.textContent = t.langBtn;
+  if (ELS.navQuiz) ELS.navQuiz.textContent = t.navQuiz;
+  if (ELS.navDictionary) ELS.navDictionary.textContent = t.navDictionary;
   // 시작 섹션
-  ELS.startSectionTitle.textContent = t.startTitle;
-  ELS.labelLessonSelect.textContent = t.lessonSelect;
+  if (ELS.startSectionTitle) ELS.startSectionTitle.textContent = t.startTitle;
+  if (ELS.labelLessonSelect) ELS.labelLessonSelect.textContent = t.lessonSelect;
   if (ELS.lessonButtons) {
     ELS.lessonButtons.setAttribute('aria-label', t.lessonSelect);
-    ELS.hintlineText.textContent = t.hintline;
+    if (ELS.hintlineText) ELS.hintlineText.textContent = t.hintline;
   } else if (ELS.lessonSelect) {
-    ELS.hintlineText.textContent = (uiLang === 'ko'
-      ? '⌘/Ctrl + 클릭으로 다중 선택'
-      : 'Giữ ⌘/Ctrl để chọn nhiều');
-  } else {
+    if (ELS.hintlineText) {
+      ELS.hintlineText.textContent = (uiLang === 'ko'
+        ? '⌘/Ctrl + 클릭으로 다중 선택'
+        : 'Giữ ⌘/Ctrl để chọn nhiều');
+    }
+  } else if (ELS.hintlineText) {
     ELS.hintlineText.textContent = t.hintline;
   }
-  ELS.labelQCount.textContent = t.qCount;
-  ELS.optRandomLabel.textContent = t.optRandom;
-  ELS.optStrictLabel.textContent = t.optStrict;
-  ELS.optTimerLabel.textContent = t.optTimer;
-  ELS.btnStart.textContent = t.start;
+  if (ELS.dictTitle) ELS.dictTitle.textContent = t.dictTitle;
+  if (ELS.dictSubtitle) ELS.dictSubtitle.textContent = t.dictSubtitle;
+  if (ELS.labelQCount) ELS.labelQCount.textContent = t.qCount;
+  if (ELS.optRandomLabel) ELS.optRandomLabel.textContent = t.optRandom;
+  if (ELS.optStrictLabel) ELS.optStrictLabel.textContent = t.optStrict;
+  if (ELS.optTimerLabel) ELS.optTimerLabel.textContent = t.optTimer;
+  if (ELS.btnStart) ELS.btnStart.textContent = t.start;
   // 퀴즈 섹션
-  ELS.labelQuestionCounter.textContent = t.questionCounter;
-  ELS.labelAccuracy.textContent = t.accuracy;
-  ELS.btnSubmit.textContent = t.submit;
-  ELS.btnHint.textContent = t.hint;
-  ELS.btnPass.textContent = t.pass;
-  ELS.btnShow.textContent = t.show;
-  ELS.answer.placeholder = t.placeholder;
+  if (ELS.labelQuestionCounter) ELS.labelQuestionCounter.textContent = t.questionCounter;
+  if (ELS.labelAccuracy) ELS.labelAccuracy.textContent = t.accuracy;
+  if (ELS.btnSubmit) ELS.btnSubmit.textContent = t.submit;
+  if (ELS.btnHint) ELS.btnHint.textContent = t.hint;
+  if (ELS.btnPass) ELS.btnPass.textContent = t.pass;
+  if (ELS.btnShow) ELS.btnShow.textContent = t.show;
+  if (ELS.answer) ELS.answer.placeholder = t.placeholder;
   // 결과 섹션
-  ELS.resultTitle.textContent = t.resultTitle;
-  ELS.scoreLabel.textContent = t.scoreLabel;
-  ELS.accuracyLabel.textContent = t.accLabel;
-  ELS.wrongTitle.textContent = t.wrongTitle;
+  if (ELS.resultTitle) ELS.resultTitle.textContent = t.resultTitle;
+  if (ELS.scoreLabel) ELS.scoreLabel.textContent = t.scoreLabel;
+  if (ELS.accuracyLabel) ELS.accuracyLabel.textContent = t.accLabel;
+  if (ELS.wrongTitle) ELS.wrongTitle.textContent = t.wrongTitle;
   // 기록/푸터
-  ELS.historyTitle.textContent = t.historyTitle;
-  ELS.btnClearHistory.textContent = t.clearHistory;
-  ELS.footerNote.textContent = t.footerNote;
+  if (ELS.historyTitle) ELS.historyTitle.textContent = t.historyTitle;
+  if (ELS.btnClearHistory) ELS.btnClearHistory.textContent = t.clearHistory;
+  if (ELS.footerNote) ELS.footerNote.textContent = t.footerNote;
   // SW 상태 초기 문구
-  ELS.swStatus.textContent = t.offlineNotReady;
+  if (ELS.swStatus) ELS.swStatus.textContent = t.offlineNotReady;
+  renderDictionary(true);
 }
 
 ELS.btnLang.addEventListener('click', () => {
@@ -228,6 +267,7 @@ async function tryLoadAllJson() {
 async function ensureMetaOptions() {
   if (!DB) {
     DB = await tryLoadAllJson();
+    dictionaryTried = true;
   }
   if (!lessonsMeta.length) {
     if (DB && Array.isArray(DB.lessons)) {
@@ -269,6 +309,7 @@ async function ensureMetaOptions() {
       : 'Giữ ⌘/Ctrl để chọn nhiều';
     ELS.hintlineText.textContent = fallbackHint;
   }
+  renderDictionary();
 }
 
 function renderLessonButtons() {
@@ -297,8 +338,123 @@ function renderLessonButtons() {
   });
 }
 
+function renderDictionary(preserveOpen = true) {
+  if (!ELS.dictLessons) return;
+  const container = ELS.dictLessons;
+  const t = I18N[uiLang];
+  if (!DB || !Array.isArray(DB.lessons)) {
+    const message = dictionaryTried ? t.dictEmpty : t.dictLoading;
+    container.innerHTML = `<p class="muted">${message}</p>`;
+    dictionaryRendered = dictionaryTried;
+    return;
+  }
+  const lessons = DB.lessons;
+  if (!lessons.length) {
+    container.innerHTML = `<p class="muted">${t.dictEmpty}</p>`;
+    dictionaryRendered = true;
+    return;
+  }
+  const openSet = new Set();
+  if (preserveOpen) {
+    container.querySelectorAll('details.dict-lesson').forEach(el => {
+      if (el.open && el.dataset.lesson) openSet.add(el.dataset.lesson);
+    });
+  }
+  container.innerHTML = '';
+  lessons.forEach(lesson => {
+    const details = document.createElement('details');
+    details.className = 'dict-lesson';
+    details.dataset.lesson = lesson.lessonId;
+    if (openSet.has(lesson.lessonId)) details.open = true;
+
+    const summary = document.createElement('summary');
+    const idSpan = document.createElement('span');
+    idSpan.className = 'dict-lesson-id';
+    idSpan.textContent = lesson.lessonId;
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'dict-lesson-title';
+    titleSpan.textContent = lesson.title || '';
+    const countSpan = document.createElement('span');
+    countSpan.className = 'dict-count';
+    countSpan.textContent = formatWordCount((lesson.items || []).length);
+    summary.append(idSpan, titleSpan, countSpan);
+    details.append(summary);
+
+    const words = document.createElement('ul');
+    words.className = 'dict-words';
+    (lesson.items || []).forEach(item => {
+      const li = document.createElement('li');
+      const row = document.createElement('div');
+      row.className = 'dict-row';
+      const koSpan = document.createElement('span');
+      koSpan.className = 'dict-ko';
+      koSpan.textContent = item.ko || '';
+      const viSpan = document.createElement('span');
+      viSpan.className = 'dict-vi';
+      viSpan.textContent = item.vi || '';
+      row.append(koSpan, viSpan);
+      li.append(row);
+      if (Array.isArray(item.altKo) && item.altKo.length) {
+        const alt = document.createElement('div');
+        alt.className = 'dict-alt';
+        alt.textContent = `${t.altLabel}: ${item.altKo.join(', ')}`;
+        li.append(alt);
+      }
+      if (item.note && item.note.trim().length) {
+        const note = document.createElement('div');
+        note.className = 'dict-note';
+        note.textContent = `${t.noteLabel}: ${item.note}`;
+        li.append(note);
+      }
+      words.append(li);
+    });
+    details.append(words);
+    container.append(details);
+  });
+  dictionaryRendered = true;
+}
+
+function updateView() {
+  const isQuiz = activeView === 'quiz';
+  if (ELS.navQuiz) {
+    ELS.navQuiz.classList.toggle('is-active', isQuiz);
+    ELS.navQuiz.setAttribute('aria-selected', isQuiz ? 'true' : 'false');
+  }
+  if (ELS.navDictionary) {
+    ELS.navDictionary.classList.toggle('is-active', !isQuiz);
+    ELS.navDictionary.setAttribute('aria-selected', !isQuiz ? 'true' : 'false');
+  }
+  const quizSections = [ELS.startPanel, ELS.quiz, ELS.result, ELS.historyPanel];
+  quizSections.forEach(el => { if (el) el.classList.toggle('view-hidden', !isQuiz); });
+  if (ELS.dictionary) {
+    if (!isQuiz) ELS.dictionary.classList.remove('hidden');
+    ELS.dictionary.classList.toggle('view-hidden', isQuiz);
+  }
+  if (!isQuiz) {
+    if (!dictionaryRendered) renderDictionary();
+    if (ELS.toast) ELS.toast.classList.remove('visible');
+  }
+}
+
+function setView(view, options = {}) {
+  const target = (view === 'dictionary') ? 'dictionary' : 'quiz';
+  const changed = activeView !== target;
+  activeView = target;
+  if (!options.skipStore && changed) {
+    localStorage.setItem(VIEW_KEY, target);
+  }
+  updateView();
+  if (activeView === 'dictionary') {
+    ensureMetaOptions();
+  }
+}
+
 // ---------- 유틸 ----------
 const nf = (n)=> new Intl.NumberFormat().format(n);
+function formatWordCount(n) {
+  const template = I18N[uiLang].wordCount || '{n}';
+  return template.replace('{n}', nf(n));
+}
 function normalize(s, strict=false) {
   if (s == null) return "";
   let x = s.normalize('NFC').trim();
@@ -497,6 +653,9 @@ function finish(){
 }
 
 // ---------- 이벤트 바인딩 ----------
+if (ELS.navQuiz) ELS.navQuiz.addEventListener('click', () => setView('quiz'));
+if (ELS.navDictionary) ELS.navDictionary.addEventListener('click', () => setView('dictionary'));
+
 ELS.btnStart.addEventListener('click', startQuiz);
 ELS.btnSubmit.addEventListener('click', submitAnswerOnce);
 ELS.btnShow.addEventListener('click', revealOnce);
@@ -523,6 +682,7 @@ ELS.btnHint.addEventListener('click', ()=>{
 // ---------- 초기화 & SW 등록 ----------
 applyI18n();
 ensureMetaOptions();
+setView(activeView, { skipStore: true });
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', ()=>{
